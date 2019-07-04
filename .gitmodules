@@ -1,0 +1,6 @@
+[submodule "backend"]
+	path = backend
+	url = git@gitlab.dimana.ir:salarmgh/anemone-backend.git
+[submodule "front"]
+	path = front
+	url = git@gitlab.dimana.ir:salarmgh/anemone.git
