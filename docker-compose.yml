@@ -45,7 +45,6 @@ services:
     image: anemone:celery
     volumes:
       - ./backend/:/app
-    tty: true
     command: ["celery", "worker", "-A", "anemone", "-l", "info"]
   front:
     build:
