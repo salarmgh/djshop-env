@@ -1,5 +1,25 @@
 version: "3.3"
 services:
+  redis:
+    image: redis:5.0.7
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.3.1
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - 9200:9200
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.3.1
+    ports:
+      - 5601:5601
   postgresql:
     image: postgres:12-alpine
     volumes:
@@ -8,6 +28,8 @@ services:
       POSTGRES_PASSWORD: anemone
       POSTGRES_USER: anemone
       POSTGRES_DB: anemone
+    ports:
+      - 5432:5432
   backend:
     build:
       context: ./backend
@@ -16,17 +38,27 @@ services:
       - 8080:8080
     volumes:
       - ./backend/:/app
-    command: ["--module", "anemone.wsgi:application", "--http", "0:8080","--processes", "4", "--py-autoreload", "1"]
+    command: ["uwsgi", "--uid", "app", "--gid", "app", "--chdir", "/app", "--module", "anemone.wsgi:application", "--http", "0:8080","--processes", "4", "--py-autoreload", "1"]
+  celery:
+    build:
+      context: ./backend
+    image: anemone:celery
+    volumes:
+      - ./backend/:/app
+    tty: true
+    command: ["celery", "worker", "-A", "anemone", "-l", "info"]
   front:
     build:
       context: ./front
     image: anemone:front
+    environment:
+      REACT_APP_BACKEND_BASE_URL: http://localhost:8080
     ports:
       - 3000:3000
     volumes:
       - ./front:/opt/app
   nginx:
-    image: nginx:1.17.1-alpine
+    image: nginx:1.17.5
     volumes:
       - ./nginx:/var/www
       - ./backend/media:/images
@@ -35,3 +67,4 @@ services:
       - 80:80
 volumes:
   pgdata: {}
+  esdata: {}
